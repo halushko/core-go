@@ -9,6 +9,21 @@ import (
 const actionInsertUpdate = "UPDATE SET"
 const actionInsertDoNothing = "NOTHING"
 
+func (d *dbImpl) ExecInsert(query string, args ...any) error {
+	q := strings.TrimSpace(query)
+
+	if q == "" {
+		return fmt.Errorf("empty query")
+	}
+
+	if !strings.HasSuffix(q, ";") {
+		q = q + ";"
+	}
+
+	_, err := d.Sqlite.Exec(q, args)
+	return err
+}
+
 func (d *dbImpl) Insert(table string, row map[string]any) error {
 	err := d.insertPlus(table, row, "")
 	if err != nil {
@@ -37,8 +52,7 @@ func (d *dbImpl) insertPlus(table string, row map[string]any, action string, onC
 	insert, args := generateInsertQuery(table, row)
 	conflict := generateOnConflict(row, action, onConflict...)
 
-	_, err := d.Sqlite.Exec(insert+conflict+";", args)
-	return err
+	return d.ExecInsert(insert+conflict, args)
 }
 
 func generateInsertQuery(table string, row map[string]any) (string, []any) {

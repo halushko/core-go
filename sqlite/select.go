@@ -7,11 +7,16 @@ import (
 	"strings"
 )
 
-func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
-	outputColumnsStr := d.generateOutputColumns(outputColumns...)
-	conditionStr, args := d.generateCondition(condition)
+func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error) {
+	q := strings.TrimSpace(query)
 
-	query := fmt.Sprintf("SELECT %s FROM %s%s;", outputColumnsStr, table, conditionStr)
+	if q == "" {
+		return nil, fmt.Errorf("empty query")
+	}
+
+	if !strings.HasSuffix(q, ";") {
+		q = q + ";"
+	}
 
 	rows, err := d.Sqlite.Query(query, args)
 
@@ -28,7 +33,7 @@ func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ..
 		if err.Error() == "sql: no rows in result set" {
 			return nil, nil
 		} else {
-			log.Printf("[ERROR] during select: %v", err)
+			log.Printf("[ERROR] during select execution: %v", err)
 			return nil, err
 		}
 	}
@@ -52,7 +57,7 @@ func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ..
 		}
 
 		if err = rows.Scan(valuePtrs...); err != nil {
-			log.Printf("[ERROR] during select: %v", err)
+			log.Printf("[ERROR] during select execution: %v", err)
 			return nil, err
 		}
 
@@ -65,11 +70,27 @@ func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ..
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("[ERROR] during select: %v", err)
+		log.Printf("[ERROR] during select execution: %v", err)
 		return nil, err
 	}
 
 	return results, nil
+}
+
+func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
+	outputColumnsStr := d.generateOutputColumns(outputColumns...)
+	conditionStr, args := d.generateCondition(condition)
+
+	query := fmt.Sprintf("SELECT %s FROM %s%s", outputColumnsStr, table, conditionStr)
+
+	res, err := d.ExecSelect(query, args...)
+
+	if err != nil {
+		log.Printf("[ERROR] during simple select: %v", err)
+		return nil, err
+	}
+
+	return res, err
 }
 
 func (d *dbImpl) generateOutputColumns(outputColumns ...string) string {
