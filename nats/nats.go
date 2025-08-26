@@ -66,7 +66,7 @@ func ParseTgBotText(data []byte) (int64, string, error) {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgCommandMessage(queue string, userId int64, message []string) {
+func PublishTgCommandMessage(queue string, userId int64, message ...string) {
 	msg := natsBotCommand{
 		UserId:    userId,
 		Arguments: message,
