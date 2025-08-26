@@ -140,29 +140,24 @@ func ParseTgBotFile(data []byte) (int64, string, string, int64, string, string, 
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func StartNatsListener(queue string, handler *ListenerHandler) error {
+func StartNatsListener(queue string, handler *ListenerHandler) {
 	nc, err := connect()
 	if err != nil {
 		log.Printf("[ERROR] Помилка під'єднання до NATS (черга \"%s\"): %v", err, queue)
-		return nil
 	}
 	if _, err = nc.Subscribe(queue, func(msg *nats.Msg) { handler.Function(msg.Data) }); err != nil {
 		log.Printf("[ERROR] Помилка підписки до черги \"%s\" в NATS: %v", queue, err)
-		return err
 	}
 
 	if err = nc.Flush(); err != nil {
 		log.Printf("[ERROR] Помилка flash в черзі \"%s\" NATS : %v", queue, err)
-		return err
 	}
 
 	if err = nc.LastError(); err != nil {
 		log.Printf("[ERROR] Помилка для черги \"%s\" в NATS: %v", queue, err)
-		return err
 	}
 
-	log.Printf("[ШТАЩ] Підписка до черги \"%s\" вдала", queue)
-	return nil
+	log.Printf("[INFO] Підписка до черги \"%s\" вдала", queue)
 }
 
 func publishMessageToNats(queue string, message []byte) {
