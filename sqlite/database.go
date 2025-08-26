@@ -15,7 +15,7 @@ type DBI interface {
 	ExecSelect(query string, args ...any) ([]map[string]any, error)
 
 	Insert(table string, row map[string]any) error
-	InsertIfNotExists(table string, row map[string]any) error
+	InsertIfNotExists(table string, row map[string]any, onConflict ...string) error
 	InsertOrUpdate(table string, row map[string]any, onConflict ...string) error
 	ExecInsert(query string, args ...any) error
 }
