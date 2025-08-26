@@ -31,7 +31,9 @@ go.sum
 # Editor/IDE
  .idea/
  .vscode/
-/.idea/.gitignore
-/.idea/core-go.iml
-/.idea/modules.xml
-/.idea/vcs.xml
+.idea/.gitignore
+.idea/core-go.iml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/dictionaries
+.idea/dictionaries/*
