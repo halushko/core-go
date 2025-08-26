@@ -11,7 +11,11 @@ type dbImpl struct {
 }
 
 type DBI interface {
-	Find(table string, byColumn string, byValue any, whatColumns ...string) ([]map[string]any, error)
+	Select(table string, byColumn string, byValue any, whatColumns ...string) ([]map[string]any, error)
+
+	Insert(table string, row map[string]any) error
+	InsertIfNotExists(table string, row map[string]any) error
+	InsertOrUpdate(table string, row map[string]any, onConflict ...string) error
 }
 
 type DBInfo struct {
