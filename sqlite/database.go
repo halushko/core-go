@@ -11,7 +11,7 @@ type dbImpl struct {
 }
 
 type DBI interface {
-	Find(table Table, by Column, byValue any, whatColumns ...Column) ([]map[string]any, error)
+	Find(table string, byColumn string, byValue any, whatColumns ...string) ([]map[string]any, error)
 }
 
 type DBInfo struct {

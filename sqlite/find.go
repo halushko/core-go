@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (d *dbImpl) Find(table Table, by Column, byValue any, whatColumns ...Column) ([]map[string]any, error) {
+func (d *dbImpl) Find(table string, byColumn string, byValue any, whatColumns ...string) ([]map[string]any, error) {
 	resultColumns := "*"
 	if whatColumns != nil && len(whatColumns) > 0 {
 		addComa := false
@@ -17,11 +17,11 @@ func (d *dbImpl) Find(table Table, by Column, byValue any, whatColumns ...Column
 			} else {
 				q.WriteString(", ")
 			}
-			q.WriteString(wc.Name)
+			q.WriteString(wc)
 		}
 		resultColumns = q.String()
 	}
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?;", resultColumns, table.Name, by.Name)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?;", resultColumns, table, byColumn)
 
 	rows, err := d.Sqlite.Query(query, byValue)
 	if err != nil {
