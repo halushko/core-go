@@ -43,13 +43,11 @@ func Init(dbInfo DBInfo) (DBI, error) {
 			}
 
 			if i < len(dbTable.Columns)-1 {
-				c.WriteString(",\n")
-			} else {
-				c.WriteString("\n)")
+				c.WriteString(",")
 			}
 			query.WriteString(c.String())
 		}
-		log.Printf("[DEBUG] %s\n", query.String())
+		log.Printf("[DEBUG] Start table creation:\n%s", query.String())
 		err = createTable(db, query.String())
 		if err != nil {
 			return nil, err
@@ -61,7 +59,7 @@ func Init(dbInfo DBInfo) (DBI, error) {
 func createTable(db *external.DB, query string) error {
 	_, err := db.Exec(query)
 	if err != nil {
-		log.Printf("[ERROR] Помилка при створенні таблиці torrent_files: %v", err)
+		log.Printf("[ERROR] Помилка при створенні таблиці: %v", err)
 		return err
 	}
 	log.Println("[INFO] Таблиця ініційована")
