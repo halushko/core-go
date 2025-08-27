@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+const AND = "AND"
+const OR = "OR"
+
 func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error) {
 	q := strings.TrimSpace(query)
 
@@ -77,16 +80,32 @@ func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error)
 	return results, nil
 }
 
-func (d *dbImpl) Select(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
+func (d *dbImpl) SelectByAll(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
 	outputColumnsStr := d.generateOutputColumns(outputColumns...)
-	conditionStr, args := d.generateCondition(condition)
+	conditionStr, args := d.generateCondition(condition, AND)
 
-	query := fmt.Sprintf("SELECT %s FROM %s%s", outputColumnsStr, table, conditionStr)
+	query := fmt.Sprintf("SELECT %s\nFROM %s\nWHERE %s", outputColumnsStr, table, conditionStr)
 
 	res, err := d.ExecSelect(query, args...)
 
 	if err != nil {
 		log.Printf("[ERROR] during simple select: %v", err)
+		return nil, err
+	}
+
+	return res, err
+}
+
+func (d *dbImpl) SelectByAny(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
+	outputColumnsStr := d.generateOutputColumns(outputColumns...)
+	conditionStr, args := d.generateCondition(condition, OR)
+
+	query := fmt.Sprintf("SELECT %s\nFROM %s\nWHERE %s", outputColumnsStr, table, conditionStr)
+
+	res, err := d.ExecSelect(query, args...)
+
+	if err != nil {
+		log.Printf("[ERROR] during simple 'OR' select: %v", err)
 		return nil, err
 	}
 
@@ -112,16 +131,22 @@ func (d *dbImpl) generateOutputColumns(outputColumns ...string) string {
 	return q.String()
 }
 
-func (d *dbImpl) generateCondition(condition map[string]any) (string, []any) {
+func (d *dbImpl) generateCondition(condition map[string]any, logic string) (string, []any) {
 	if condition == nil || len(condition) == 0 {
 		return "", make([]any, 0)
 	}
 
 	var q strings.Builder
 	args := make([]any, 0)
+	isFirstCondition := true
 
-	q.WriteString("\nWHERE ")
 	for k, v := range condition {
+		if isFirstCondition {
+			isFirstCondition = false
+		} else {
+			q.WriteString(logic + " ")
+
+		}
 		q.WriteString(k)
 		q.WriteString(" = ")
 		q.WriteString(" ?\n")

@@ -11,7 +11,8 @@ type dbImpl struct {
 }
 
 type DBI interface {
-	Select(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error)
+	SelectByAll(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error)
+	SelectByAny(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error)
 	ExecSelect(query string, args ...any) ([]map[string]any, error)
 
 	Insert(table string, row map[string]any) error
