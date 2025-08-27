@@ -18,6 +18,8 @@ type DBI interface {
 	InsertIfNotExists(table string, row map[string]any, onConflict ...string) error
 	InsertOrUpdate(table string, row map[string]any, onConflict ...string) error
 	ExecInsert(query string, args ...any) error
+
+	Update(table string, set map[string]any, where map[string]any) error
 }
 
 type DBInfo struct {
@@ -32,7 +34,7 @@ type Table struct {
 
 type Column struct {
 	Name          string
-	Type          SQLiteType
+	Type          Type
 	IsPrimaryKey  bool
 	IsNullable    bool
 	IsUnique      bool
@@ -40,11 +42,12 @@ type Column struct {
 	Autoincrement bool
 }
 
-type SQLiteType string
+type Type string
 
+//goland:noinspection GoUnusedConst
 const (
-	SQLiteInteger SQLiteType = "INTEGER"
-	SQLiteReal    SQLiteType = "REAL"
-	SQLiteText    SQLiteType = "TEXT"
-	SQLiteBlob    SQLiteType = "BLOB"
+	Integer Type = "INTEGER"
+	Real    Type = "REAL"
+	Text    Type = "TEXT"
+	Blob    Type = "BLOB"
 )
