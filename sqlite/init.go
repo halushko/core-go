@@ -6,6 +6,8 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+
+	_ "modernc.org/sqlite"
 )
 
 //goland:noinspection GoUnusedExportedFunction

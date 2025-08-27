@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	_ "modernc.org/sqlite"
 )
 
 func (d *dbImpl) ExecUpdate(query string, args ...any) error {

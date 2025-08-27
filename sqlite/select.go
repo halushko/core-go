@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	_ "modernc.org/sqlite"
 )
 
 func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error) {
