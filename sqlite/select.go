@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-const AND = "AND"
-const OR = "OR"
-
 func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error) {
 	q := strings.TrimSpace(query)
 
@@ -81,15 +78,9 @@ func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error)
 }
 
 func (d *dbImpl) SelectByAll(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
-	outputColumnsStr := d.generateOutputColumns(outputColumns...)
-	conditionStr, args := d.generateCondition(condition, AND)
-
-	query := fmt.Sprintf("SELECT %s\nFROM %s\nWHERE %s", outputColumnsStr, table, conditionStr)
-
-	res, err := d.ExecSelect(query, args...)
-
+	res, err := d.selectPlus(table, condition, sqlAND, outputColumns...)
 	if err != nil {
-		log.Printf("[ERROR] during simple select: %v", err)
+		log.Printf("[ERROR] during select by all: %v", err)
 		return nil, err
 	}
 
@@ -97,19 +88,24 @@ func (d *dbImpl) SelectByAll(table string, condition map[string]any, outputColum
 }
 
 func (d *dbImpl) SelectByAny(table string, condition map[string]any, outputColumns ...string) ([]map[string]any, error) {
-	outputColumnsStr := d.generateOutputColumns(outputColumns...)
-	conditionStr, args := d.generateCondition(condition, OR)
-
-	query := fmt.Sprintf("SELECT %s\nFROM %s\nWHERE %s", outputColumnsStr, table, conditionStr)
-
-	res, err := d.ExecSelect(query, args...)
-
+	res, err := d.selectPlus(table, condition, sqlOR, outputColumns...)
 	if err != nil {
-		log.Printf("[ERROR] during simple 'OR' select: %v", err)
+		log.Printf("[ERROR] during select by any: %v", err)
 		return nil, err
 	}
 
 	return res, err
+}
+
+func (d *dbImpl) selectPlus(table string, condition map[string]any, conditionBy string, outputColumns ...string) ([]map[string]any, error) {
+	outputColumnsStr := d.generateOutputColumns(outputColumns...)
+	conditionStr, args := d.generateCondition(condition, conditionBy)
+
+	query := strings.Join([]string{
+		sqlSELECT + " " + outputColumnsStr,
+		sqlFROM + " " + table,
+		sqlWHERE + " " + conditionStr}, "\n")
+	return d.ExecSelect(query+";", args...)
 }
 
 func (d *dbImpl) generateOutputColumns(outputColumns ...string) string {

@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+//goland:noinspection GoUnusedExportedFunction
 func Init(dbInfo DBInfo) (DBI, error) {
 	db, err := external.Open("sqlite", filepath.Join(dbPath, dbInfo.Project, dbInfo.Name+".db"))
 	if err != nil {
@@ -17,7 +18,7 @@ func Init(dbInfo DBInfo) (DBI, error) {
 
 	for _, dbTable := range dbInfo.Tables {
 		var query strings.Builder
-		query.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s", dbTable.Name))
+		query.WriteString(fmt.Sprintf(sqlCreateTable+" %s", dbTable.Name))
 		for i, col := range dbTable.Columns {
 			var c strings.Builder
 			c.WriteString(fmt.Sprintf("\n\t%s %s", col.Name, col.Type))

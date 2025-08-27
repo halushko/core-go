@@ -6,9 +6,6 @@ import (
 	"strings"
 )
 
-const actionInsertUpdate = "UPDATE SET"
-const actionInsertDoNothing = "NOTHING"
-
 func (d *dbImpl) ExecInsert(query string, args ...any) error {
 	q := strings.TrimSpace(query)
 
@@ -33,7 +30,7 @@ func (d *dbImpl) Insert(table string, row map[string]any) error {
 }
 
 func (d *dbImpl) InsertOrUpdate(table string, row map[string]any, onConflict ...string) error {
-	err := d.insertPlus(table, row, actionInsertUpdate, onConflict...)
+	err := d.insertPlus(table, row, sqlDoUpdateSet, onConflict...)
 	if err != nil {
 		log.Printf("[ERROR] during insert or update: %v", err)
 	}
@@ -41,7 +38,7 @@ func (d *dbImpl) InsertOrUpdate(table string, row map[string]any, onConflict ...
 }
 
 func (d *dbImpl) InsertIfNotExists(table string, row map[string]any, onConflict ...string) error {
-	err := d.insertPlus(table, row, actionInsertDoNothing, onConflict...)
+	err := d.insertPlus(table, row, sqlDoNothing, onConflict...)
 	if err != nil {
 		log.Printf("[ERROR] during insert or do nothing: %v", err)
 	}
@@ -57,7 +54,7 @@ func (d *dbImpl) insertPlus(table string, row map[string]any, action string, onC
 
 func generateInsertQuery(table string, row map[string]any) (string, []any) {
 	var q strings.Builder
-	q.WriteString("INSERT INTO ")
+	q.WriteString(sqlINSERT + " ")
 	q.WriteString(table)
 	q.WriteString(" (")
 
@@ -80,7 +77,7 @@ func generateInsertQuery(table string, row map[string]any) (string, []any) {
 	}
 
 	q.WriteString(k.String())
-	q.WriteString(") VALUES (")
+	q.WriteString(") " + sqlVALUES + " (")
 	q.WriteString(v.String())
 	q.WriteString(")")
 
@@ -103,7 +100,7 @@ func generateOnConflict(row map[string]any, action string, onConflict ...string)
 		conf[key] = true
 	}
 
-	q.WriteString("\nON CONFLICT (")
+	q.WriteString("\n" + sqlON + " " + sqlCONFLICT + " (")
 
 	var conflict strings.Builder
 
@@ -126,16 +123,16 @@ func generateOnConflict(row map[string]any, action string, onConflict ...string)
 	}
 
 	q.WriteString(conflict.String())
-	q.WriteString(") DO ")
+	q.WriteString(") ")
 
 	return q.String() + generatePostAction(row, action, onConflict...)
 }
 
 func generatePostAction(row map[string]any, action string, onConflict ...string) string {
 	switch {
-	case action == actionInsertDoNothing:
+	case action == sqlDoNothing:
 		return action
-	case action == actionInsertUpdate:
+	case action == sqlDoUpdateSet:
 		if onConflict == nil || len(onConflict) == 0 {
 			return ""
 		}
