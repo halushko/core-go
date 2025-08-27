@@ -93,7 +93,7 @@ func generateOnConflict(row map[string]any, action string, onConflict ...string)
 
 	var q strings.Builder
 
-	conf := make(map[string]bool, 0)
+	conf := make(map[string]bool)
 	for key := range row {
 		conf[key] = false
 	}

@@ -20,7 +20,7 @@ func Init(dbInfo DBInfo) (DBI, error) {
 
 	for _, dbTable := range dbInfo.Tables {
 		var query strings.Builder
-		query.WriteString(fmt.Sprintf(sqlCreateTable+" %s", dbTable.Name))
+		query.WriteString(fmt.Sprintf(sqlCreateTable+" %s (", dbTable.Name))
 		for i, col := range dbTable.Columns {
 			var c strings.Builder
 			c.WriteString(fmt.Sprintf("\n\t%s %s", col.Name, col.Type))
@@ -47,6 +47,7 @@ func Init(dbInfo DBInfo) (DBI, error) {
 			}
 			query.WriteString(c.String())
 		}
+		query.WriteString(");")
 		log.Printf("[DEBUG] Start table creation:\n%s", query.String())
 		err = createTable(db, query.String())
 		if err != nil {
