@@ -29,7 +29,7 @@ const (
 
 	sqlDoUpdateSet = sqlDO + " " + sqlUPDATE + " " + sqlSET
 	sqlDoNothing   = sqlDO + " " + sqlNOTHING
-	sqlCreateTable = "CREATE TABLE IF NOT EXISTS "
+	sqlCreateTable = "CREATE TABLE IF NOT EXISTS"
 )
 
 type dbImpl struct {

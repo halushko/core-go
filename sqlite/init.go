@@ -4,6 +4,7 @@ import (
 	external "database/sql"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -12,7 +13,13 @@ import (
 
 //goland:noinspection GoUnusedExportedFunction
 func Init(dbInfo DBInfo) (DBI, error) {
-	db, err := external.Open("sqlite", filepath.Join(dbPath, dbInfo.Project, dbInfo.Name+".db"))
+	dir := filepath.Join(dbPath, dbInfo.Project)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.Printf("[InitDB] Помилка при створенні папки для проектної БД: %v", err)
+		return nil, err
+	}
+
+	db, err := external.Open("sqlite", filepath.Join(dir, dbInfo.Name+".db"))
 	if err != nil {
 		log.Fatalf("[InitDB] Помилка при підключенні до БД: %v", err)
 		return nil, err
