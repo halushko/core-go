@@ -19,7 +19,7 @@ func (d *dbImpl) ExecUpdate(query string, args ...any) error {
 	if !strings.HasSuffix(q, ";") {
 		q = q + ";"
 	}
-	_, err := d.Sqlite.Query(query, args)
+	_, err := d.Sqlite.Query(query, args...)
 	return err
 }
 

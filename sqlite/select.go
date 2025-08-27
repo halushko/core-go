@@ -20,7 +20,7 @@ func (d *dbImpl) ExecSelect(query string, args ...any) ([]map[string]any, error)
 		q = q + ";"
 	}
 
-	rows, err := d.Sqlite.Query(query, args)
+	rows, err := d.Sqlite.Query(query, args...)
 
 	if rows != nil {
 		defer func(rows *external.Rows) {

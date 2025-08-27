@@ -11,17 +11,17 @@ import (
 )
 
 type natsBotText struct {
-	UserId int64  `json:"user_id"`
+	ChatId int64  `json:"chat_id"`
 	Text   string `json:"text"`
 }
 
 type natsBotCommand struct {
-	UserId    int64    `json:"user_id"`
+	ChatId    int64    `json:"chat_id"`
 	Arguments []string `json:"arguments"`
 }
 
 type natsBotFile struct {
-	UserId   int64  `json:"user_id"`
+	ChatId   int64  `json:"chat_id"`
 	FileId   string `json:"file_id"`
 	FileName string `json:"file_name"`
 	Size     int64  `json:"size"`
@@ -36,9 +36,9 @@ type ListenerHandler struct {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgTextMessage(queue string, userId int64, text string) {
+func PublishTgTextMessage(queue string, chatId int64, text string) {
 	msg := natsBotText{
-		UserId: userId,
+		ChatId: chatId,
 		Text:   text,
 	}
 
@@ -59,16 +59,16 @@ func ParseTgBotText(data []byte) (int64, string, error) {
 		return 0, "", err
 	}
 
-	userId := msg.UserId
+	chatId := msg.ChatId
 	text := msg.Text
-	log.Printf("[DEBUG] Отримано текст \"%s\" для користувача %d", text, userId)
-	return userId, text, nil
+	log.Printf("[DEBUG] Отримано текст \"%s\" для чату %d", text, chatId)
+	return chatId, text, nil
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgCommandMessage(queue string, userId int64, message ...string) {
+func PublishTgCommandMessage(queue string, chatId int64, message ...string) {
 	msg := natsBotCommand{
-		UserId:    userId,
+		ChatId:    chatId,
 		Arguments: message,
 	}
 
@@ -91,17 +91,17 @@ func ParseTgBotCommand(data []byte) (int64, []string, error) {
 		return 0, nil, err
 	}
 
-	userId := msg.UserId
+	chatId := msg.ChatId
 	arguments := msg.Arguments
 
-	log.Printf("[DEBUG] Отримано аргументи команди \"%v\" для користувача %d", arguments, userId)
-	return userId, arguments, nil
+	log.Printf("[DEBUG] Отримано аргументи команди \"%v\" для чату %d", arguments, chatId)
+	return chatId, arguments, nil
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgFileInfoMessage(queue string, userId int64, fileId string, fileName string, fileSize int64, mimeType string, url string) {
+func PublishTgFileInfoMessage(queue string, chatId int64, fileId string, fileName string, fileSize int64, mimeType string, url string) {
 	msg := natsBotFile{
-		UserId:   userId,
+		ChatId:   chatId,
 		FileId:   fileId,
 		FileName: fileName,
 		Size:     fileSize,
@@ -128,15 +128,15 @@ func ParseTgBotFile(data []byte) (int64, string, string, int64, string, string, 
 		return 0, "", "", 0, "", "", err
 	}
 
-	userId := msg.UserId
+	chatId := msg.ChatId
 	fileId := msg.FileId
 	fileName := msg.FileName
 	size := msg.Size
 	mimeType := msg.MimeType
 	fileUrl := msg.URL
 
-	log.Printf("[DEBUG] Отримано файл \"%s\" для користувача %d", fileName, userId)
-	return userId, fileId, fileName, size, mimeType, fileUrl, nil
+	log.Printf("[DEBUG] Отримано файл \"%s\" для чату %d", fileName, chatId)
+	return chatId, fileId, fileName, size, mimeType, fileUrl, nil
 }
 
 //goland:noinspection GoUnusedExportedFunction

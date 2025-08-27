@@ -19,7 +19,7 @@ func (d *dbImpl) ExecInsert(query string, args ...any) error {
 		q = q + ";"
 	}
 
-	_, err := d.Sqlite.Exec(q, args)
+	_, err := d.Sqlite.Exec(q, args...)
 	return err
 }
 
