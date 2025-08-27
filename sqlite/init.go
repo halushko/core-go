@@ -25,12 +25,13 @@ func Init(dbInfo DBInfo) (DBI, error) {
 
 			if col.IsPrimaryKey {
 				c.WriteString(" PRIMARY KEY")
-			} else if col.IsNullable {
-				c.WriteString(" NOT NULL")
-			}
-
-			if col.IsUnique {
-				c.WriteString(" UNIQUE")
+			} else {
+				if col.IsNonNull {
+					c.WriteString(" NOT NULL")
+				}
+				if col.IsUnique {
+					c.WriteString(" UNIQUE")
+				}
 			}
 
 			if col.Autoincrement {
