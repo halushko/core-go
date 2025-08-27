@@ -65,7 +65,7 @@ type Column struct {
 	Name          string
 	Type          Type
 	IsPrimaryKey  bool
-	IsNonNull     bool
+	IsNotNull     bool
 	IsUnique      bool
 	Default       string
 	Autoincrement bool

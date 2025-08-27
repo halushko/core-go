@@ -24,6 +24,7 @@ func SoftPrepareLogFile(fileName string) *os.File {
 		return nil
 	}
 	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
 	log.Println(fmt.Sprintf("[DEBUG] Log file created: %s", filePath))
 	return logFile
 }

@@ -26,7 +26,7 @@ func Init(dbInfo DBInfo) (DBI, error) {
 			if col.IsPrimaryKey {
 				c.WriteString(" PRIMARY KEY")
 			} else {
-				if col.IsNonNull {
+				if col.IsNotNull {
 					c.WriteString(" NOT NULL")
 				}
 				if col.IsUnique {
