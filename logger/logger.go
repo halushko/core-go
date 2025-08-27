@@ -15,6 +15,10 @@ func SoftPrepareLogFile(fileName string) *os.File {
 		fmt.Printf("[DEBUG] log file destination env LOG_FOLDER_PATH is empty. Using default: %s", defaultLogFolder)
 		logFolderPath = defaultLogFolder
 	}
+	if err := os.MkdirAll(logFolderPath, 0o755); err != nil {
+		log.Printf("[InitDB] can't create log file directory: %v", err)
+		return nil
+	}
 
 	filePath := fmt.Sprintf("%s/%s", logFolderPath, fileName)
 

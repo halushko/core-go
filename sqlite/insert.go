@@ -51,7 +51,7 @@ func (d *dbImpl) insertPlus(table string, row map[string]any, action string, onC
 	insert, args := generateInsertQuery(table, row)
 	conflict := generateOnConflict(row, action, onConflict...)
 
-	return d.ExecInsert(insert+conflict, args)
+	return d.ExecInsert(insert+conflict, args...)
 }
 
 func generateInsertQuery(table string, row map[string]any) (string, []any) {
