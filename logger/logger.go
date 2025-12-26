@@ -1,47 +1,42 @@
 package logger
 
 import (
-	"fmt"
-	"log"
 	"os"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const defaultLogFolder = "./logs"
 
 //goland:noinspection GoUnusedExportedFunction
-func SoftPrepareLogFile(fileName string) *os.File {
-	logFolderPath := os.Getenv("LOG_FOLDER_PATH")
-	if logFolderPath == "" {
-		fmt.Printf("[DEBUG] log file destination env LOG_FOLDER_PATH is empty. Using default: %s", defaultLogFolder)
-		logFolderPath = defaultLogFolder
+func Init() error {
+	level := os.Getenv("LOG_LEVEL")
+	file := os.Getenv("LOG_FILE")
+	if file == "" {
+		file = defaultLogFolder
 	}
-	if err := os.MkdirAll(logFolderPath, 0o755); err != nil {
-		log.Printf("[InitDB] can't create log file directory: %v", err)
-		return nil
-	}
-
-	filePath := fmt.Sprintf("%s/%s", logFolderPath, fileName)
-
-	logFile, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		log.Println(fmt.Sprintf("[ERROR] can't open log file: %v", err))
-		return nil
-	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds | log.Lshortfile)
-	log.Println(fmt.Sprintf("[DEBUG] Log file created: %s", filePath))
-	return logFile
-}
-
-//goland:noinspection GoUnusedExportedFunction
-func SoftLogClose(file *os.File) {
-	if file == nil {
-		log.Println("[ERROR] logfile is nil")
-		return
+		return err
 	}
 
-	err := file.Close()
-	if err != nil {
-		log.Println(fmt.Sprintf("[ERROR] Can't close log file %s: %v", file.Name(), err))
+	log.SetOutput(f)
+
+	switch strings.ToLower(level) {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
+
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	return nil
 }
