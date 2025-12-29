@@ -23,6 +23,7 @@ profile.cov
 # Go workspace file
 go.work
 go.work.sum
+go.imports.xml
 
 # env file
 .env
@@ -36,3 +37,7 @@ go.work.sum
 .idea/vcs.xml
 .idea/dictionaries
 .idea/dictionaries/*
+.idea/copilot.data.migration.agent.xml
+.idea/copilot.data.migration.ask.xml
+.idea/copilot.data.migration.edit.xml
+.idea/copilot.data.migration.ask2agent.xml
