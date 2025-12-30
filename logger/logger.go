@@ -1,7 +1,10 @@
 package logger
 
 import (
+	"fmt"
 	"os"
+	"path"
+	"runtime"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -22,6 +25,7 @@ func Init() error {
 	}
 
 	log.SetOutput(f)
+	log.SetReportCaller(true)
 
 	switch strings.ToLower(level) {
 	case "debug":
@@ -36,6 +40,12 @@ func Init() error {
 
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			funcName := path.Base(f.Function)
+			fileName := fmt.Sprintf("%s:%d", path.Base(f.File), f.Line)
+
+			return funcName, fileName
+		},
 	})
 
 	return nil
