@@ -36,7 +36,7 @@ func Open(name string) (*Client, error) {
 
 	dbFile := filepath.Join(getDbPath(), name+".sqlite")
 
-	db, err := external.Open("sqlite3", dbFile)
+	db, err := external.Open("sqlite", dbFile)
 	if err != nil {
 		return nil, fmt.Errorf("sql open: %w", err)
 	}
