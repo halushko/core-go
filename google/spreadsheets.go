@@ -18,6 +18,7 @@ const a1FullNotation = `^(?:'([^']+)'|([^!]+))!([A-Z]+)([1-9][0-9]*):([A-Z]+)([1
 
 type Client struct {
 	svc *sheets.Service
+	ctx context.Context
 }
 
 // NewFromServiceAccountFile creates a client from a service account JSON file.
@@ -36,7 +37,7 @@ func NewFromServiceAccountFile(ctx context.Context, jsonPath string) (*Client, e
 		return nil, fmt.Errorf("create sheets service: %w", err)
 	}
 	log.Infof("Created a new Google Spreadsheet client")
-	return &Client{svc: svc}, nil
+	return &Client{svc: svc, ctx: ctx}, nil
 }
 
 // NewFromServiceAccountJSON creates a client directly from JSON bytes (convenient if you keep the key secret).
@@ -55,7 +56,7 @@ func NewFromServiceAccountJSON(ctx context.Context, jsonBytes []byte) (*Client, 
 		return nil, fmt.Errorf("create sheets service: %w", err)
 	}
 	log.Infof("Created a new Google Spreadsheet client")
-	return &Client{svc: svc}, nil
+	return &Client{svc: svc, ctx: ctx}, nil
 }
 
 // ColToA1 1 -> A, 2 -> B, ... 26 -> Z, 27 -> AA ...
@@ -99,11 +100,11 @@ func A1ToNumber(col string) int {
 //
 //goland:noinspection GoUnusedExportedFunction
 func (c *Client) ReadByA1(
-	ctx context.Context, spreadsheetID string, sheetName string,
+	spreadsheetID string, sheetName string,
 	startCol string, startRow int,
 	endCol string, endRow int,
 ) ([][]string, error) {
-	return c.ReadByIndexes(ctx, spreadsheetID, sheetName, A1ToNumber(startCol), startRow, A1ToNumber(endCol), endRow)
+	return c.ReadByIndexes(spreadsheetID, sheetName, A1ToNumber(startCol), startRow, A1ToNumber(endCol), endRow)
 }
 
 // ReadByIndexes reads a rectangular range in coordinates (rows/columns) and returns [][]string.
@@ -116,11 +117,11 @@ func (c *Client) ReadByA1(
 //
 //goland:noinspection GoUnusedExportedFunction
 func (c *Client) ReadByIndexes(
-	ctx context.Context, spreadsheetID, sheetName string,
+	spreadsheetID, sheetName string,
 	startCol, startRow int,
 	endCol, endRow int) ([][]string, error) {
 
-	if c == nil || c.svc == nil {
+	if c == nil || c.svc == nil || c.ctx == nil {
 		return nil, errors.New("client is not initialized")
 	}
 	if strings.TrimSpace(spreadsheetID) == "" {
@@ -142,7 +143,7 @@ func (c *Client) ReadByIndexes(
 
 	a1 := buildA1Range(sheetName, ColToA1(startCol), startRow, ColToA1(endCol), endRow)
 
-	resp, err := c.svc.Spreadsheets.Values.Get(spreadsheetID, a1).Context(ctx).Do()
+	resp, err := c.svc.Spreadsheets.Values.Get(spreadsheetID, a1).Context(c.ctx).Do()
 	if err != nil {
 		return nil, fmt.Errorf("values.get %s: %w", a1, err)
 	}
@@ -155,7 +156,6 @@ func (c *Client) ReadByIndexes(
 //	Sheet!A2:D
 //	'Sheet name'!B1:AA20
 func (c *Client) Read(
-	ctx context.Context,
 	spreadsheetID string,
 	a1 string,
 ) ([][]string, error) {
@@ -163,7 +163,7 @@ func (c *Client) Read(
 	if err != nil {
 		return nil, err
 	}
-	return c.ReadByA1(ctx, spreadsheetID, sheetName, startCol, startRow, endCol, endRow)
+	return c.ReadByA1(spreadsheetID, sheetName, startCol, startRow, endCol, endRow)
 }
 
 func parseA1Range(a1 string) (string, string, int, string, int, error) {

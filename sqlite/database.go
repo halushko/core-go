@@ -30,11 +30,11 @@ func Open(name string) (*Client, error) {
 		return nil, errors.New("db name is empty")
 	}
 
-	if err := os.MkdirAll(GetDbPath(), 0o755); err != nil {
+	if err := os.MkdirAll(getDbPath(), 0o755); err != nil {
 		return nil, fmt.Errorf("mkdir db path: %w", err)
 	}
 
-	dbFile := filepath.Join(GetDbPath(), name+".sqlite")
+	dbFile := filepath.Join(getDbPath(), name+".sqlite")
 
 	db, err := external.Open("sqlite3", dbFile)
 	if err != nil {
@@ -124,7 +124,17 @@ func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error)
 	return out, nil
 }
 
-func GetDbPath() string {
+// DropTable drops a table by name if it exists.
+func (c *Client) DropTable(name string) error {
+	if name == "" {
+		return errors.New("table name is empty")
+	}
+
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %q", name)
+	return c.Execute(query)
+}
+
+func getDbPath() string {
 	path := os.Getenv("DB_PATH")
 	if path == "" {
 		return dbDefaultPath
