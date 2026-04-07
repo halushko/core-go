@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	external "database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,8 @@ import (
 )
 
 const dbDefaultPath = "/data/sqlite"
+
+var sqlFiles embed.FS
 
 type Client struct {
 	db *external.DB
@@ -74,6 +77,15 @@ func (c *Client) Execute(query string, args ...any) error {
 	return nil
 }
 
+func (c *Client) ExecuteSqlFile(path string, args ...any) error {
+	query, err := sqlFiles.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return c.Execute(string(query), args...)
+}
+
 func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error) {
 	if c == nil || c.db == nil {
 		return nil, errors.New("db client is nil")
@@ -122,6 +134,15 @@ func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error)
 	}
 
 	return out, nil
+}
+
+func (c *Client) ExecSelectSqlFile(path string, args ...any) ([]map[string]any, error) {
+	query, err := sqlFiles.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.ExecSelect(string(query), args...)
 }
 
 // DropTable drops a table by name if it exists.
