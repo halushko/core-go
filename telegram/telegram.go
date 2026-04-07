@@ -1,12 +1,26 @@
-package nats
+package telegram
 
 import (
 	"encoding/json"
+	"errors"
 
+	"github.com/halushko/core-go/nats"
 	log "github.com/sirupsen/logrus"
 )
 
-const TelegramOutputTextQueue = "TELEGRAM_OUTPUT_TEXT_QUEUE"
+const TgOutputTextQueue = "TELEGRAM_OUTPUT_TEXT_QUEUE"
+
+type Client struct {
+	NatsClient *nats.Client
+}
+
+//goland:noinspection GoUnusedExportedFunction
+func NewClient(natsClient *nats.Client) (*Client, error) {
+	if natsClient == nil {
+		return nil, errors.New("nats client is nil")
+	}
+	return &Client{NatsClient: natsClient}, nil
+}
 
 type natsBotText struct {
 	ChatId int64  `json:"chat_id"`
@@ -28,21 +42,17 @@ type natsBotFile struct {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgTextMessage(queue string, chatId int64, text string) {
+func (c *Client) PublishTgTextMessage(queue string, chatId int64, text string) error {
 	msg := natsBotText{
 		ChatId: chatId,
 		Text:   text,
 	}
 
-	if jsonData, err := json.Marshal(msg); err == nil {
-		publishMessageToNats(queue, jsonData)
-	} else {
-		log.Errorf("%v", err)
-	}
+	return c.NatsClient.PublishStruct(queue, msg)
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func ParseTgBotText(data []byte) (int64, string, error) {
+func (c *Client) ParseTgBotText(data []byte) (int64, string, error) {
 	var msg natsBotText
 
 	err := json.Unmarshal(data, &msg)
@@ -58,23 +68,17 @@ func ParseTgBotText(data []byte) (int64, string, error) {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgCommandMessage(queue string, chatId int64, message ...string) {
+func (c *Client) PublishTgCommandMessage(queue string, chatId int64, message ...string) error {
 	msg := natsBotCommand{
 		ChatId:    chatId,
 		Arguments: message,
 	}
 
-	jsonData, err := json.Marshal(msg)
-	if err != nil {
-		log.Errorf("%v", err)
-		return
-	}
-
-	publishMessageToNats(queue, jsonData)
+	return c.NatsClient.PublishStruct(queue, msg)
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func ParseTgBotCommand(data []byte) (int64, []string, error) {
+func (c *Client) ParseTgBotCommand(data []byte) (int64, []string, error) {
 	var msg natsBotCommand
 
 	err := json.Unmarshal(data, &msg)
@@ -91,7 +95,7 @@ func ParseTgBotCommand(data []byte) (int64, []string, error) {
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func PublishTgFileInfoMessage(queue string, chatId int64, fileId string, fileName string, fileSize int64, mimeType string, url string) {
+func (c *Client) PublishTgFileInfoMessage(queue string, chatId int64, fileId string, fileName string, fileSize int64, mimeType string, url string) error {
 	msg := natsBotFile{
 		ChatId:   chatId,
 		FileId:   fileId,
@@ -101,17 +105,11 @@ func PublishTgFileInfoMessage(queue string, chatId int64, fileId string, fileNam
 		URL:      url,
 	}
 
-	jsonData, err := json.Marshal(msg)
-	if err != nil {
-		log.Errorf("%v", err)
-		return
-	}
-
-	publishMessageToNats(queue, jsonData)
+	return c.NatsClient.PublishStruct(queue, msg)
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func ParseTgBotFile(data []byte) (int64, string, string, int64, string, string, error) {
+func (c *Client) ParseTgBotFile(data []byte) (int64, string, string, int64, string, string, error) {
 	var msg natsBotFile
 
 	err := json.Unmarshal(data, &msg)
@@ -132,6 +130,6 @@ func ParseTgBotFile(data []byte) (int64, string, string, int64, string, string, 
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func SendTgMessageToUser(userId int64, text string) {
-	PublishTgTextMessage(TelegramOutputTextQueue, userId, text)
+func (c *Client) SendTgMessageToUser(userId int64, text string) error {
+	return c.PublishTgTextMessage(TgOutputTextQueue, userId, text)
 }
