@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	external "database/sql"
-	"embed"
 	"errors"
 	"fmt"
 	"os"
@@ -14,8 +13,6 @@ import (
 )
 
 const dbDefaultPath = "/data/sqlite"
-
-var sqlFiles embed.FS
 
 type Client struct {
 	db *external.DB
@@ -78,7 +75,7 @@ func (c *Client) Execute(query string, args ...any) error {
 }
 
 func (c *Client) ExecuteSqlFile(path string, args ...any) error {
-	query, err := sqlFiles.ReadFile(path)
+	query, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -137,7 +134,7 @@ func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error)
 }
 
 func (c *Client) ExecSelectSqlFile(path string, args ...any) ([]map[string]any, error) {
-	query, err := sqlFiles.ReadFile(path)
+	query, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -156,10 +153,9 @@ func (c *Client) DropTable(name string) error {
 }
 
 func getDbPath() string {
-	path := os.Getenv("DB_PATH")
-	if path == "" {
-		return dbDefaultPath
-	} else {
+	if path := os.Getenv("DB_PATH"); path != "" {
 		return path
 	}
+
+	return dbDefaultPath
 }
