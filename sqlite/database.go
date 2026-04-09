@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -14,13 +16,47 @@ import (
 
 const dbDefaultPath = "/data/sqlite"
 
+var macroRegexp = regexp.MustCompile(`#\$([a-zA-Z_][a-zA-Z0-9_]*)\$#`)
+
 type Client struct {
 	db *external.DB
 }
 
+type ColumnType string
+
+const (
+	TypeInteger  ColumnType = "INTEGER"
+	TypeText     ColumnType = "TEXT"
+	TypeReal     ColumnType = "REAL"
+	TypeBlob     ColumnType = "BLOB"
+	TypeDatetime ColumnType = "DATETIME"
+)
+
+type Column struct {
+	Name          string
+	Type          ColumnType
+	PrimaryKey    *bool
+	NotNull       *bool
+	Unique        *bool
+	GeneratedExpr *string
+	Stored        *bool
+}
+
+type Table struct {
+	Name    string
+	Columns []Column
+}
+
 type DBI interface {
 	Select(query string, args ...any) ([]map[string]any, error)
-	Exec(query string, args ...any) error
+	Execute(query string, args ...any) error
+	ExecuteNamed(query string, params map[string]any) error
+	ExecuteSqlFile(path string, args ...any) error
+	ExecSelect(query string, args ...any) ([]map[string]any, error)
+	ExecSelectSqlFile(path string, args ...any) ([]map[string]any, error)
+	CreateTable(t Table) error
+	DropTable(name string) error
+
 	Close() error
 }
 
@@ -74,13 +110,44 @@ func (c *Client) Execute(query string, args ...any) error {
 	return nil
 }
 
+func (c *Client) ExecuteNamed(query string, params map[string]any) error {
+	if c == nil || c.db == nil {
+		return errors.New("db client is nil")
+	}
+
+	compiledQuery, args, err := compileNamedQuery(query, params)
+	if err != nil {
+		return fmt.Errorf("compile named query: %w", err)
+	}
+
+	return c.Execute(compiledQuery, args...)
+}
+
 func (c *Client) ExecuteSqlFile(path string, args ...any) error {
+	if c == nil || c.db == nil {
+		return errors.New("db client is nil")
+	}
+
 	query, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	return c.Execute(string(query), args...)
+}
+
+func (c *Client) ExecuteSqlFileNamed(path string, params map[string]any) error {
+	query, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	compiledQuery, args, err := compileNamedQuery(string(query), params)
+	if err != nil {
+		return fmt.Errorf("compile named query: %w", err)
+	}
+
+	return c.Execute(compiledQuery, args...)
 }
 
 func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error) {
@@ -142,7 +209,46 @@ func (c *Client) ExecSelectSqlFile(path string, args ...any) ([]map[string]any, 
 	return c.ExecSelect(string(query), args...)
 }
 
-// DropTable drops a table by name if it exists.
+func (c *Client) CreateTable(t Table) error {
+	var cols []string
+
+	for _, c := range t.Columns {
+		if err := c.Type.validateColumnType(); err != nil {
+			return err
+		}
+
+		col := c.Name + " " + string(c.Type)
+
+		if c.GeneratedExpr != nil {
+			col += " GENERATED ALWAYS AS (" + *c.GeneratedExpr + ")"
+			if c.Stored != nil && *c.Stored {
+				col += " STORED"
+			} else {
+				col += " VIRTUAL"
+			}
+		} else {
+			if c.PrimaryKey != nil && *c.PrimaryKey {
+				col += " PRIMARY KEY"
+			}
+			if c.NotNull != nil && *c.NotNull {
+				col += " NOT NULL"
+			}
+			if c.Unique != nil {
+				col += " UNIQUE"
+			}
+		}
+
+		cols = append(cols, col)
+	}
+
+	query := fmt.Sprintf(
+		`CREATE TABLE IF NOT EXISTS %s (%s);`,
+		t.Name,
+		strings.Join(cols, ",\n"),
+	)
+	return c.Execute(query)
+}
+
 func (c *Client) DropTable(name string) error {
 	if name == "" {
 		return errors.New("table name is empty")
@@ -158,4 +264,51 @@ func getDbPath() string {
 	}
 
 	return dbDefaultPath
+}
+
+func (t ColumnType) validateColumnType() error {
+	switch t {
+	case TypeInteger, TypeText, TypeReal, TypeBlob, TypeDatetime:
+		return nil
+	default:
+		return fmt.Errorf("invalid column type: %s", t)
+	}
+}
+
+func compileNamedQuery(query string, params map[string]any) (string, []any, error) {
+	if query == "" {
+		return "", nil, fmt.Errorf("query is empty")
+	}
+
+	args := make([]any, 0)
+
+	matches := macroRegexp.FindAllStringSubmatchIndex(query, -1)
+	if len(matches) == 0 {
+		return query, args, nil
+	}
+
+	result := make([]byte, 0, len(query))
+	last := 0
+
+	for _, m := range matches {
+		fullStart, fullEnd := m[0], m[1]
+		nameStart, nameEnd := m[2], m[3]
+
+		result = append(result, query[last:fullStart]...)
+
+		name := query[nameStart:nameEnd]
+		value, ok := params[name]
+		if !ok {
+			return "", nil, fmt.Errorf("missing macro value for key %q", name)
+		}
+
+		result = append(result, '?')
+		args = append(args, value)
+
+		last = fullEnd
+	}
+
+	result = append(result, query[last:]...)
+
+	return string(result), args, nil
 }
