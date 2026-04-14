@@ -13,14 +13,25 @@ import (
 
 var natsURL = fmt.Sprintf("nats://%s:%s", os.Getenv("BROKER_IP"), os.Getenv("BROKER_PORT"))
 
+type Client struct {
+	conn *nats.Conn
+}
+
+type Message struct {
+	data  []byte
+	reply func([]byte) error
+}
+
 type ListenerHandlerFunction func(data []byte)
 
 type ListenerHandler struct {
 	Function ListenerHandlerFunction
 }
 
-type Client struct {
-	conn *nats.Conn
+type RequestListenerHandlerFunction func(msg *Message)
+
+type RequestListenerHandler struct {
+	Function RequestListenerHandlerFunction
 }
 
 //goland:noinspection GoUnusedExportedFunction
@@ -42,6 +53,9 @@ func (c *Client) Close() {
 }
 
 func (c *Client) StartListener(queue string, handler *ListenerHandler) error {
+	if c == nil || c.conn == nil {
+		return fmt.Errorf("nats client is not initialized")
+	}
 	if handler == nil || handler.Function == nil {
 		return fmt.Errorf("handler is nil")
 	}
@@ -67,49 +81,101 @@ func (c *Client) StartListener(queue string, handler *ListenerHandler) error {
 	return nil
 }
 
-func (c *Client) RequestBytes(queue string, message []byte, timeout time.Duration) ([]byte, error) {
+func (c *Client) StartRequestListener(queue string, handler *RequestListenerHandler) error {
 	if c == nil || c.conn == nil {
-		return nil, fmt.Errorf("nats client is not initialized")
+		return fmt.Errorf("nats client is not initialized")
+	}
+	if handler == nil || handler.Function == nil {
+		return fmt.Errorf("handler is nil")
 	}
 
-	msg, err := c.conn.Request(queue, message, timeout)
-	if err != nil {
-		log.Errorf("Request to NATS queue %q failed: %v", queue, err)
-		return nil, fmt.Errorf("request to queue %q: %w", queue, err)
+	if _, err := c.conn.Subscribe(queue, func(msg *nats.Msg) {
+		wrapped := &Message{
+			data: msg.Data,
+			reply: func(data []byte) error {
+				if msg.Reply == "" {
+					return fmt.Errorf("no reply subject")
+				}
+				return msg.Respond(data)
+			},
+		}
+
+		handler.Function(wrapped)
+	}); err != nil {
+		return fmt.Errorf("subscribe to queue %q: %w", queue, err)
 	}
 
-	return msg.Data, nil
+	if err := c.conn.Flush(); err != nil {
+		return fmt.Errorf("flush queue %q: %w", queue, err)
+	}
+
+	if err := c.conn.LastError(); err != nil {
+		return fmt.Errorf("last error for queue %q: %w", queue, err)
+	}
+
+	return nil
 }
 
-func (c *Client) RequestStruct(queue string, payload any, timeout time.Duration) ([]byte, error) {
+func (c *Client) Request(queue string, payload any, timeout time.Duration, response any) error {
+	if response == nil {
+		return fmt.Errorf("response target is nil")
+	}
+	if c == nil || c.conn == nil {
+		return fmt.Errorf("nats client is not initialized")
+	}
 	if payload == nil {
-		return nil, fmt.Errorf("payload is nil")
+		return fmt.Errorf("payload is nil")
 	}
 
 	t := reflect.TypeOf(payload)
 	if t.Kind() == reflect.Ptr {
 		if t.Elem().Kind() != reflect.Struct {
-			return nil, fmt.Errorf("payload must be a struct or pointer to struct, got %s", t.Kind())
+			return fmt.Errorf("payload must be a struct or pointer to struct, got %s", t.Kind())
 		}
 	} else if t.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("payload must be a struct or pointer to struct, got %s", t.Kind())
+		return fmt.Errorf("payload must be a struct or pointer to struct, got %s", t.Kind())
 	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("marshal struct for queue %q: %w", queue, err)
+		return fmt.Errorf("marshal struct for queue %q: %w", queue, err)
 	}
 
-	return c.RequestBytes(queue, data, timeout)
+	msg, err := c.conn.Request(queue, data, timeout)
+	if err != nil {
+		log.Errorf("Request to NATS queue %q failed: %v", queue, err)
+		return fmt.Errorf("request to queue %q: %w", queue, err)
+	}
+
+	if err := json.Unmarshal(msg.Data, response); err != nil {
+		return fmt.Errorf("unmarshal response from queue %q: %w", queue, err)
+	}
+
+	return nil
 }
 
-//goland:noinspection GoUnusedExportedFunction
-func Respond(msg *nats.Msg, data []byte) error {
-	if msg == nil || msg.Reply == "" {
-		return fmt.Errorf("no reply subject")
+func (m *Message) Respond(v any) error {
+	if m == nil {
+		return fmt.Errorf("message is nil")
 	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	if m.reply == nil {
+		return fmt.Errorf("reply handler is nil")
+	}
+	return m.reply(data)
+}
 
-	return msg.Respond(data)
+func (m *Message) Unmarshal(v any) error {
+	if m == nil {
+		return fmt.Errorf("message is nil")
+	}
+	if v == nil {
+		return fmt.Errorf("target is nil")
+	}
+	return json.Unmarshal(m.data, v)
 }
 
 func (c *Client) PublishBytes(queue string, message []byte) error {
