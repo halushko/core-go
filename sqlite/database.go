@@ -217,6 +217,15 @@ func (c *Client) DropTable(name string) error {
 	return c.Execute(query)
 }
 
+func (c *Client) TruncateTable(name string) error {
+	if name == "" {
+		return errors.New("table name is empty")
+	}
+
+	query := fmt.Sprintf(`DELETE FROM %q`, name)
+	return c.Execute(query)
+}
+
 func getDbPath() string {
 	if path := os.Getenv("DB_PATH"); path != "" {
 		return path
