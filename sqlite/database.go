@@ -19,6 +19,7 @@ type DBI interface {
 	ExecuteSqlFile(path string, args ...any) error
 	ExecuteSqlFileNamed(path string, params map[string]any) error
 	ExecSelect(query string, args ...any) ([]map[string]any, error)
+	ExecSelectNamed(query string, params map[string]any) ([]map[string]any, error)
 	ExecSelectWithTimeout(query string, timeout time.Duration, args ...any) ([]map[string]any, error)
 	ExecSelectSqlFile(path string, args ...any) ([]map[string]any, error)
 	ExecSelectSqlFileWithTimeout(path string, timeout time.Duration, args ...any) ([]map[string]any, error)
@@ -122,6 +123,15 @@ func (c *Client) ExecuteSqlFileNamed(path string, params map[string]any) error {
 func (c *Client) ExecSelect(query string, args ...any) ([]map[string]any, error) {
 	return c.ExecSelectWithTimeout(query, 24*5*time.Hour, args...)
 }
+
+func (c *Client) ExecSelectNamed(query string, params map[string]any) ([]map[string]any, error) {
+	compiledQuery, args, err := buildMacrosQuery(query, params)
+	if err != nil {
+		return nil, fmt.Errorf("compile named query: %w", err)
+	}
+	return c.ExecSelect(compiledQuery, args...)
+}
+
 func (c *Client) ExecSelectWithTimeout(query string, timeout time.Duration, args ...any) ([]map[string]any, error) {
 	if c == nil || c.db == nil {
 		return nil, errors.New("db client is nil")
@@ -172,8 +182,28 @@ func (c *Client) ExecSelectWithTimeout(query string, timeout time.Duration, args
 	return out, nil
 }
 
+func (c *Client) ExecSelectWithTimeoutNamed(query string, timeout time.Duration, params map[string]any) ([]map[string]any, error) {
+	compiledQuery, args, err := buildMacrosQuery(query, params)
+	if err != nil {
+		return nil, fmt.Errorf("compile named query: %w", err)
+	}
+	return c.ExecSelectWithTimeout(compiledQuery, timeout, args...)
+}
+
 func (c *Client) ExecSelectSqlFile(path string, args ...any) ([]map[string]any, error) {
 	return c.ExecSelectSqlFileWithTimeout(path, 24*5*time.Hour, args...)
+}
+
+func (c *Client) ExecSelectSqlFileNamed(path string, params map[string]any) ([]map[string]any, error) {
+	query, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	compiledQuery, args, err := buildMacrosQuery(string(query), params)
+	if err != nil {
+		return nil, fmt.Errorf("compile named query: %w", err)
+	}
+	return c.ExecSelect(compiledQuery, args...)
 }
 
 func (c *Client) ExecSelectSqlFileWithTimeout(path string, timeout time.Duration, args ...any) ([]map[string]any, error) {
@@ -183,6 +213,18 @@ func (c *Client) ExecSelectSqlFileWithTimeout(path string, timeout time.Duration
 	}
 
 	return c.ExecSelectWithTimeout(string(query), timeout, args...)
+}
+
+func (c *Client) ExecSelectSqlFileWithTimeoutNamed(path string, timeout time.Duration, params map[string]any) ([]map[string]any, error) {
+	query, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	compiledQuery, args, err := buildMacrosQuery(string(query), params)
+	if err != nil {
+		return nil, fmt.Errorf("compile named query: %w", err)
+	}
+	return c.ExecSelectWithTimeout(compiledQuery, timeout, args...)
 }
 
 func (c *Client) CreateTable(t Table) error {

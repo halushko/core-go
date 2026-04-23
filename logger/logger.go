@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const defaultLogFolder = "./logs"
+const defaultLogFolder = "logs/logs.log"
 
 //goland:noinspection GoUnusedExportedFunction
 func Init() error {
