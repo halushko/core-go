@@ -3,6 +3,7 @@ package sqlite
 import (
 	external "database/sql"
 	"regexp"
+	"sync"
 )
 
 const dbDefaultPath = "/data/sqlite"
@@ -10,7 +11,8 @@ const dbDefaultPath = "/data/sqlite"
 var macroRegexp = regexp.MustCompile(`#\$([a-zA-Z_][a-zA-Z0-9_]*)\$#`)
 
 type Client struct {
-	db *external.DB
+	db    *external.DB
+	mutex *sync.Mutex
 }
 
 type ColumnType string

@@ -7,12 +7,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
 type DBI interface {
+	Open(name string) (*Client, error)
+	OpenMutex(name string, mutex *sync.Mutex) (*Client, error)
+
 	Select(query string, args ...any) ([]map[string]any, error)
 	Execute(query string, args ...any) error
 	ExecuteNamed(query string, params map[string]any) error
@@ -30,8 +34,11 @@ type DBI interface {
 	Close() error
 }
 
-//goland:noinspection GoUnusedExportedFunction
 func Open(name string) (*Client, error) {
+	return OpenMutex(name, nil)
+}
+
+func OpenMutex(name string, mutex *sync.Mutex) (*Client, error) {
 	if name == "" {
 		return nil, errors.New("db name is empty")
 	}
@@ -56,7 +63,7 @@ func Open(name string) (*Client, error) {
 		return nil, fmt.Errorf("db ping: %w", err)
 	}
 
-	return &Client{db: db}, nil
+	return &Client{db: db, mutex: mutex}, nil
 }
 
 func (c *Client) Close() error {
@@ -72,6 +79,11 @@ func (c *Client) Execute(query string, args ...any) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	if c.mutex != nil {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+	}
 
 	_, err := c.db.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -138,6 +150,11 @@ func (c *Client) ExecSelectWithTimeout(query string, timeout time.Duration, args
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+
+	if c.mutex != nil {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+	}
 
 	rows, err := c.db.QueryContext(ctx, query, args...)
 	if err != nil {
