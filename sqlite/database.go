@@ -35,10 +35,15 @@ type DBI interface {
 }
 
 func Open(name string) (*Client, error) {
-	return OpenMutex(name, nil)
+	return open(name, nil)
 }
 
-func OpenMutex(name string, mutex *sync.Mutex) (*Client, error) {
+func OpenMutex(name string) (*Client, error) {
+	var mutex *sync.Mutex
+	return open(name, mutex)
+}
+
+func open(name string, mutex *sync.Mutex) (*Client, error) {
 	if name == "" {
 		return nil, errors.New("db name is empty")
 	}
