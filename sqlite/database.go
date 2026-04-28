@@ -39,8 +39,7 @@ func Open(name string) (*Client, error) {
 }
 
 func OpenMutex(name string) (*Client, error) {
-	var mutex *sync.Mutex
-	return open(name, mutex)
+	return open(name, &sync.Mutex{})
 }
 
 func open(name string, mutex *sync.Mutex) (*Client, error) {
