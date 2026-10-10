@@ -1,6 +1,7 @@
 github.com/halushko/core-go/logger v1.0.0/go.mod h1:c7nWDFuQjT941sNN9+S2gIjtfdevQbYREvSPhKqhPBU=
 github.com/halushko/core-go/logger v1.1.0 h1:8dcyhS6wEhOQFbpgPatOLERrbhl8v9lJuX9/n3ZIDGw=
 github.com/halushko/core-go/logger v1.1.0/go.mod h1:mOwUXvgV7AB1g5HqL1K6e0zeCyRwzqvFov3fH80FGSA=
+github.com/halushko/core-go/logger v1.2.0/go.mod h1:Q7YmT7Z1IsWIy8egz19PCc8kgeXHMqyYo5DeMN2Pt2A=
 github.com/klauspost/compress v1.20.0 h1:a3C1ke2ohxFymNlb2HWAHjDeKCI90scRskErZkR0ezA=
 github.com/klauspost/compress v1.20.0/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
 github.com/klauspost/compress v1.20.1 h1:T7kKElXUMXrUJ2E9QhQhxFtcK5rPyLdsGZvdbLMPdiQ=
