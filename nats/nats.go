@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	log "github.com/halushko/core-go/logger"
 	"github.com/nats-io/nats.go"
-	log "github.com/sirupsen/logrus"
 )
 
 var natsURL = fmt.Sprintf("nats://%s:%s", os.Getenv("BROKER_IP"), os.Getenv("BROKER_PORT"))
@@ -152,6 +152,14 @@ func (c *Client) Request(queue string, payload any, timeout time.Duration, respo
 	}
 
 	return nil
+}
+
+func (c *Client) PublishJsonStructure(queue string, jsonMessage struct{}) error {
+	if jsonData, err := json.Marshal(jsonMessage); err == nil {
+		return c.PublishBytes(queue, jsonData)
+	} else {
+		return err
+	}
 }
 
 func (m *Message) Respond(v any) error {
