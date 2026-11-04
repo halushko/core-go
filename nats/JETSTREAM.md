@@ -3,7 +3,7 @@
 The existing core NATS client methods remain unchanged. JetStream requires
 the server to have JetStream enabled and a stream configured for the subject.
 
-\`\`\`go
+```go
 ctx, cancel := context.WithCancel(context.Background())
 defer cancel()
 
@@ -23,10 +23,10 @@ err = client.StartJetStreamListener(
         return process(data)
     },
 )
-\`\`\`
+```
 
-\`PublishJetStreamBytes\` and \`PublishJetStreamStruct\` wait for a publish
-acknowledgement from JetStream. \`StartJetStreamListener\` creates a durable pull
+`PublishJetStreamBytes` and `PublishJetStreamStruct` wait for a publish
+acknowledgement from JetStream. `StartJetStreamListener` creates a durable pull
 consumer if absent, otherwise binds to it, processes messages one at a time,
 and explicitly acknowledges successful processing. A failed handler uses Nak
 and the message can be redelivered. Processing should therefore be idempotent.
