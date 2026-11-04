@@ -69,12 +69,22 @@ func (c *Client) StartJetStreamListener(
 	if err != nil {
 		return fmt.Errorf("initialize JetStream: %w", err)
 	}
-	sub, err := js.PullSubscribe(
-		subject, durable,
-		natsio.BindStream(stream),
-		natsio.ManualAck(),
-		natsio.AckExplicit(),
-	)
+	// Create the durable explicitly so subscription cleanup never deletes it.
+	info, infoErr := js.ConsumerInfo(stream, durable)
+	if infoErr != nil {
+		if _, err := js.AddConsumer(stream, &natsio.ConsumerConfig{
+			Durable: durable, FilterSubject: subject, AckPolicy: natsio.AckExplicitPolicy,
+		}); err != nil {
+			// Another worker may have created the consumer concurrently.
+			if info, infoErr = js.ConsumerInfo(stream, durable); infoErr != nil {
+				return fmt.Errorf("create durable consumer %q: %w", durable, err)
+			}
+		}
+	}
+	if info != nil && info.Config.FilterSubject != subject {
+		return fmt.Errorf("durable consumer %q uses subject %q, expected %q", durable, info.Config.FilterSubject, subject)
+	}
+	sub, err := js.PullSubscribe(subject, durable, natsio.Bind(stream, durable))
 	if err != nil {
 		return fmt.Errorf("pull subscribe to stream %q, durable %q: %w", stream, durable, err)
 	}
