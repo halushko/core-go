@@ -57,6 +57,7 @@ type Column struct {
 	Name          string
 	Type          ColumnType
 	PrimaryKey    *bool
+	Autoincrement *bool
 	NotNull       *bool
 	Unique        *bool
 	GeneratedExpr *string

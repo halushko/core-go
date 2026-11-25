@@ -22,6 +22,9 @@ func buildColumnsSQL(t Table) []string {
 		} else {
 			if c.PrimaryKey != nil && *c.PrimaryKey {
 				part += " PRIMARY KEY"
+				if c.Autoincrement != nil && *c.Autoincrement {
+					part += " AUTOINCREMENT"
+				}
 			}
 			if c.NotNull != nil && *c.NotNull {
 				part += " NOT NULL"
