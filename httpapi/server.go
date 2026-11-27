@@ -7,20 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const DefaultMaxBodyBytes int64
-	// OpenAPI is disabled when nil.
-	OpenAPI *OpenAPIConfig = 1 << 20
+const DefaultMaxBodyBytes int64 = 1 << 20
 
 type Config struct {
 	// MaxBodyBytes defaults to 1 MiB when zero or negative.
 	MaxBodyBytes int64
+
+	// OpenAPI is disabled when nil.
+	OpenAPI *OpenAPIConfig
 }
 
 // Server owns the HTTP router. Its public API does not expose Gin.
 type Server struct {
 	engine       *gin.Engine
 	maxBodyBytes int64
-	docs *openAPIDocument
+	docs         *openAPIDocument
 }
 
 func New() *Server {
