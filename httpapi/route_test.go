@@ -11,16 +11,14 @@ import (
 	"github.com/halushko/core-go/httpapi"
 )
 
-type pathInput struct {
-	ID string `uri:"id" binding:"required"`
+type getInput struct {
+	ID string `path:"id" validate:"required"`
+	Limit int `query:"limit" validate:"required,min=1"`
 }
 
-type queryInput struct {
-	Limit int `form:"limit" binding:"required,min=1"`
-}
-
-type bodyInput struct {
-	Name string `json:"name" binding:"required"`
+type postInput struct {
+	ID string `path:"id" validate:"required"`
+	Name string `json:"name" validate:"required"`
 }
 
 type result struct {
@@ -43,9 +41,9 @@ func request(s *httpapi.Server, method, path, body, contentType string) *httptes
 func TestGET(t *testing.T) {
 	s := httpapi.New()
 	calls := 0
-	httpapi.GET(s, "/items/:id", func(ctx *httpapi.Context, in httpapi.Input[pathInput, queryInput, httpapi.Empty], out *result) error {
+	httpapi.GET(s, "/items/:id", func(in *getInput, out *result) error {
 		calls++
-		out.ID, out.Limit = in.Path.ID, in.Query.Limit
+		out.ID, out.Limit = in.ID, in.Limit
 		out.AddAlert("warning")
 		return nil
 	})
@@ -71,9 +69,9 @@ func TestGET(t *testing.T) {
 func TestPOST(t *testing.T) {
 	s := httpapi.NewWithConfig(httpapi.Config{MaxBodyBytes: 40})
 	calls := 0
-	httpapi.POST(s, "/items/:id", func(ctx *httpapi.Context, in httpapi.Input[pathInput, httpapi.Empty, bodyInput], out *result) error {
+	httpapi.POSTWithContext(s, "/items/:id", func(ctx *httpapi.Context, in *postInput, out *result) error {
 		calls++
-		out.ID, out.Name = in.Path.ID, in.Body.Name
+		out.ID, out.Name = in.ID, in.Name
 		return ctx.SetStatus(http.StatusCreated)
 	})
 	w := request(s, "POST", "/items/abc", `{"name":"test"}`, "application/json")
@@ -112,25 +110,25 @@ func TestPOST(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	s := httpapi.New()
-	httpapi.GET(s, "/missing", func(ctx *httpapi.Context, in httpapi.Input[httpapi.Empty, httpapi.Empty, httpapi.Empty], out *result) error {
+	httpapi.GETWithContext(s, "/missing", func(ctx *httpapi.Context, in *httpapi.Empty, out *result) error {
 		out.ID = "partial"
 		out.AddAlert("warning")
 		return httpapi.NotFound("ITEM_NOT_FOUND", "Item not found")
 	})
-	httpapi.GET(s, "/failed", func(ctx *httpapi.Context, in httpapi.Input[httpapi.Empty, httpapi.Empty, httpapi.Empty], out *result) error {
+	httpapi.GETWithContext(s, "/failed", func(ctx *httpapi.Context, in *httpapi.Empty, out *result) error {
 		return errors.New("private database information")
 	})
-	httpapi.GET(s, "/panic", func(ctx *httpapi.Context, in httpapi.Input[httpapi.Empty, httpapi.Empty, httpapi.Empty], out *result) error {
+	httpapi.GETWithContext(s, "/panic", func(ctx *httpapi.Context, in *httpapi.Empty, out *result) error {
 		panic("secret panic")
 	})
-	httpapi.GET(s, "/empty", func(ctx *httpapi.Context, in httpapi.Input[httpapi.Empty, httpapi.Empty, httpapi.Empty], out *result) error {
+	httpapi.GETWithContext(s, "/empty", func(ctx *httpapi.Context, in *httpapi.Empty, out *result) error {
 		return ctx.SetStatus(http.StatusNoContent)
 	})
 	type broken struct {
 		httpapi.ApiResult
 		Channel chan int `json:"channel"`
 	}
-	httpapi.GET(s, "/broken", func(ctx *httpapi.Context, in httpapi.Input[httpapi.Empty, httpapi.Empty, httpapi.Empty], out *broken) error {
+	httpapi.GETWithContext(s, "/broken", func(ctx *httpapi.Context, in *httpapi.Empty, out *broken) error {
 		return nil
 	})
 	for _, tc := range []struct {

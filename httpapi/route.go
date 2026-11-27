@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -31,16 +32,19 @@ func (c *Context) SetStatus(status int) error {
 	return nil
 }
 
-type Handler[P, Q, B, O any] func(*Context, Input[P, Q, B], *O) error
+type Handler[I, O any] func(*I, *O) error
+
+type ContextHandler[I, O any] func(*Context, *I, *O) error
 
 // Handle binds and validates inputs, invokes the typed handler once,
 // and sends the output automatically. O must embed ApiResult by value.
-func Handle[P, Q, B, O any, R ResultPointer[O]](s *Server, method, path string, handler Handler[P, Q, B, O]) {
+func HandleWithContext[I, O any, R ResultPointer[O]](s *Server, method, path string, handler ContextHandler[I, O]) {
 	if handler == nil {
 		panic("httpapi: nil handler")
 	}
-	if (method == http.MethodGet || method == http.MethodHead) && !isEmpty[B]() {
-		panic("httpapi: GET and HEAD cannot declare a JSON body")
+	schema, err := compileInput[I](method, path)
+	if err != nil {
+		panic(fmt.Sprintf("httpapi: %s %s: %v", method, path, err))
 	}
 	s.engine.Handle(method, path, func(c *gin.Context) {
 		defer func() {
@@ -60,11 +64,11 @@ func Handle[P, Q, B, O any, R ResultPointer[O]](s *Server, method, path string, 
 		}
 		meta.Alerts = []string{}
 
-		var in Input[P, Q, B]
+		var in I
 		ctx := &Context{ctx: c.Request.Context(), header: c.Request.Header, status: http.StatusOK}
-		err := bindInput(c, s.maxBodyBytes, &in)
+		err := schema.bind(c, s.maxBodyBytes, &in)
 		if err == nil {
-			err = handler(ctx, in, out)
+			err = handler(ctx, &in, out)
 		}
 		if err != nil {
 			status, code, message := classifyError(err, c.FullPath())
@@ -82,24 +86,60 @@ func Handle[P, Q, B, O any, R ResultPointer[O]](s *Server, method, path string, 
 	})
 }
 
-func GET[P, Q, O any, R ResultPointer[O]](s *Server, path string, handler Handler[P, Q, Empty, O]) {
-	Handle[P, Q, Empty, O, R](s, http.MethodGet, path, handler)
+// Handle registers a handler that needs no request context.
+func Handle[I, O any, R ResultPointer[O]](s *Server, method, path string, handler Handler[I, O]) {
+	if handler == nil { panic("httpapi: nil handler") }
+	HandleWithContext[I, O, R](s, method, path, func(_ *Context, in *I, out *O) error {
+		return handler(in, out)
+	})
 }
 
-func POST[P, Q, B, O any, R ResultPointer[O]](s *Server, path string, handler Handler[P, Q, B, O]) {
-	Handle[P, Q, B, O, R](s, http.MethodPost, path, handler)
+func GET[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodGet, path, handler)
 }
 
-func PUT[P, Q, B, O any, R ResultPointer[O]](s *Server, path string, handler Handler[P, Q, B, O]) {
-	Handle[P, Q, B, O, R](s, http.MethodPut, path, handler)
+func GETWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodGet, path, handler)
 }
 
-func PATCH[P, Q, B, O any, R ResultPointer[O]](s *Server, path string, handler Handler[P, Q, B, O]) {
-	Handle[P, Q, B, O, R](s, http.MethodPatch, path, handler)
+func POST[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodPost, path, handler)
 }
 
-func DELETE[P, Q, B, O any, R ResultPointer[O]](s *Server, path string, handler Handler[P, Q, B, O]) {
-	Handle[P, Q, B, O, R](s, http.MethodDelete, path, handler)
+func POSTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodPost, path, handler)
+}
+
+func PUT[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodPut, path, handler)
+}
+
+func PUTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodPut, path, handler)
+}
+
+func PATCH[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodPatch, path, handler)
+}
+
+func PATCHWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodPatch, path, handler)
+}
+
+func DELETE[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodDelete, path, handler)
+}
+
+func DELETEWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodDelete, path, handler)
+}
+
+func HEAD[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
+	Handle[I, O, R](s, http.MethodHead, path, handler)
+}
+
+func HEADWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
+	HandleWithContext[I, O, R](s, http.MethodHead, path, handler)
 }
 
 func classifyError(err error, route string) (int, string, string) {
