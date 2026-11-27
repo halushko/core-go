@@ -97,8 +97,7 @@ and HEAD have no body.
 JSON endpoints require a JSON Content-Type and enforce a configurable 1 MiB
 default body limit. Malformed input is 400, oversized bodies 413, unsupported
 media types 415, missing routes 404, unsupported methods 405, panics and
-encoding failures 500. Authentication middleware, CORS, streaming and
-OpenAPI are outside this first version.
+encoding failures 500. Authentication middleware, CORS and streaming are outside this first version.
 
 ## Tests
 
@@ -107,3 +106,51 @@ cd httpapi
 go mod tidy
 go test -race ./...
 ```
+
+## Automatic OpenAPI 3.1 and Swagger UI
+
+```go
+server := httpapi.NewWithConfig(httpapi.Config{
+    OpenAPI: &httpapi.OpenAPIConfig{
+        Title: "Release Management API",
+        Version: "1.0.0",
+        Description: "Release automation service",
+        SwaggerUI: true,
+    },
+})
+httpapi.POST(server, "/api/releases/:release/tasks", handler,
+    httpapi.Summary("Create task"),
+    httpapi.Tags("Release tasks"),
+    httpapi.Response(409, "Task already exists"),
+    httpapi.BearerAuth(),
+)
+server.Run(":8080")
+```
+
+Documentation is opt-in. Register endpoints normally before starting the
+server; schemas are generated at registration from the same compiled input
+metadata used by request binding. No build-time generator or annotations in
+comments. Available endpoints: GET /openapi.json, GET /openapi.yaml and
+(optional) GET /swagger/ with locally embedded Swagger UI assets. No CDN
+or online validator is required. OpenAPIJSON() and OpenAPIYAML() can also
+export snapshots without opening a listening socket.
+
+Add optional description and example tags to fields. Path, query, header,
+cookie and JSON fields are separated automatically; body schemas contain
+only JSON fields. Defaults are typed, and common validator rules are mapped
+to schema constraints. Output includes embedded ApiResult, nested structs,
+arrays and maps; recursive schemas use component references. Conditional and complex validator
+rules are retained in x-go-validate rather than fully translated.
+Custom JSON marshal/unmarshal implementations and unusual embedded-field
+conflicts may need manual documentation; the schema generator is intentionally
+limited to common encoding/json patterns.
+
+Response status 200 and framework input/error responses are inferred.
+Use Response(201, "Created") to document a custom success status instead of
+200; Response(404, ...) documents business errors. These options describe
+the contract only, not runtime status or authorization behavior. BearerAuth()
+declares an OpenAPI bearer security scheme; binding Authorization alone is
+not authentication, and reserved headers are not emitted as ordinary
+OpenAPI parameters. OperationID, Description and HideFromOpenAPI are also
+available. Do not put real secrets in example or default tags. Keep docs
+disabled or restrict them at the deployment boundary for private services.

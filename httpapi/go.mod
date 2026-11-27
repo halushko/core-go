@@ -5,6 +5,8 @@ go 1.23.0
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-playground/validator/v10 v10.27.0
+	github.com/swaggo/files/v2 v2.0.2
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -41,5 +43,4 @@ require (
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
