@@ -7,7 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const DefaultMaxBodyBytes int64 = 1 << 20
+const DefaultMaxBodyBytes int64
+	// OpenAPI is disabled when nil.
+	OpenAPI *OpenAPIConfig = 1 << 20
 
 type Config struct {
 	// MaxBodyBytes defaults to 1 MiB when zero or negative.
@@ -18,6 +20,7 @@ type Config struct {
 type Server struct {
 	engine       *gin.Engine
 	maxBodyBytes int64
+	docs *openAPIDocument
 }
 
 func New() *Server {
@@ -38,7 +41,11 @@ func NewWithConfig(config Config) *Server {
 	engine.NoMethod(func(c *gin.Context) {
 		writeFailure(c, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Method not allowed")
 	})
-	return &Server{engine: engine, maxBodyBytes: config.MaxBodyBytes}
+	s := &Server{engine: engine, maxBodyBytes: config.MaxBodyBytes}
+	if config.OpenAPI != nil {
+		s.enableOpenAPI(*config.OpenAPI)
+	}
+	return s
 }
 
 // ServeHTTP also allows integration with net/http.Server and httptest.

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,13 +39,20 @@ type ContextHandler[I, O any] func(*Context, *I, *O) error
 
 // Handle binds and validates inputs, invokes the typed handler once,
 // and sends the output automatically. O must embed ApiResult by value.
-func HandleWithContext[I, O any, R ResultPointer[O]](s *Server, method, path string, handler ContextHandler[I, O]) {
+func HandleWithContext[I, O any, R ResultPointer[O]](s *Server, method, path string, handler ContextHandler[I, O], options ...RouteOption) {
 	if handler == nil {
 		panic("httpapi: nil handler")
 	}
 	schema, err := compileInput[I](method, path)
 	if err != nil {
 		panic(fmt.Sprintf("httpapi: %s %s: %v", method, path, err))
+	}
+	metadata := routeMetadata{responses: make(map[int]string)}
+	for _, option := range options {
+		if option != nil { option(&metadata) }
+	}
+	if s.docs != nil {
+		s.docs.register(method, path, reflect.TypeOf((*I)(nil)).Elem(), reflect.TypeOf((*O)(nil)).Elem(), schema, metadata)
 	}
 	s.engine.Handle(method, path, func(c *gin.Context) {
 		defer func() {
@@ -87,59 +95,59 @@ func HandleWithContext[I, O any, R ResultPointer[O]](s *Server, method, path str
 }
 
 // Handle registers a handler that needs no request context.
-func Handle[I, O any, R ResultPointer[O]](s *Server, method, path string, handler Handler[I, O]) {
+func Handle[I, O any, R ResultPointer[O]](s *Server, method, path string, handler Handler[I, O], options ...RouteOption) {
 	if handler == nil { panic("httpapi: nil handler") }
 	HandleWithContext[I, O, R](s, method, path, func(_ *Context, in *I, out *O) error {
 		return handler(in, out)
-	})
+	}, options...)
 }
 
-func GET[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodGet, path, handler)
+func GET[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodGet, path, handler, options...)
 }
 
-func GETWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodGet, path, handler)
+func GETWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodGet, path, handler, options...)
 }
 
-func POST[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodPost, path, handler)
+func POST[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodPost, path, handler, options...)
 }
 
-func POSTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodPost, path, handler)
+func POSTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodPost, path, handler, options...)
 }
 
-func PUT[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodPut, path, handler)
+func PUT[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodPut, path, handler, options...)
 }
 
-func PUTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodPut, path, handler)
+func PUTWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodPut, path, handler, options...)
 }
 
-func PATCH[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodPatch, path, handler)
+func PATCH[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodPatch, path, handler, options...)
 }
 
-func PATCHWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodPatch, path, handler)
+func PATCHWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodPatch, path, handler, options...)
 }
 
-func DELETE[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodDelete, path, handler)
+func DELETE[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodDelete, path, handler, options...)
 }
 
-func DELETEWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodDelete, path, handler)
+func DELETEWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodDelete, path, handler, options...)
 }
 
-func HEAD[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O]) {
-	Handle[I, O, R](s, http.MethodHead, path, handler)
+func HEAD[I, O any, R ResultPointer[O]](s *Server, path string, handler Handler[I, O], options ...RouteOption) {
+	Handle[I, O, R](s, http.MethodHead, path, handler, options...)
 }
 
-func HEADWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O]) {
-	HandleWithContext[I, O, R](s, http.MethodHead, path, handler)
+func HEADWithContext[I, O any, R ResultPointer[O]](s *Server, path string, handler ContextHandler[I, O], options ...RouteOption) {
+	HandleWithContext[I, O, R](s, http.MethodHead, path, handler, options...)
 }
 
 func classifyError(err error, route string) (int, string, string) {
