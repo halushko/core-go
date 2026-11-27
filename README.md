@@ -7,3 +7,6 @@
 3. LOG_FILE
 # Sqlite Optional ENVs:
 1. DB_PATH - the path to a databases folder
+
+# HTTP API
+Typed JSON endpoints with automatic request binding, validation, alerts and HTTP errors. See [httpapi](httpapi/README.md).
