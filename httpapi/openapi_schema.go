@@ -18,6 +18,10 @@ var jsonUnmarshaler = reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 func nullableSchema(schema object) object {
 	// Keep annotations on the outer schema, including the typed default.
 	if _, ok := schema["anyOf"]; ok { return schema }
+	if _, ok := schema["type"].([]string); ok {
+		if values, ok := schema["enum"].([]any); ok { schema["enum"] = append(values, nil) }
+		return schema
+	}
 	if t, ok := schema["type"].(string); ok {
 		schema["type"] = []string{t, "null"}
 		if values, ok := schema["enum"].([]any); ok { schema["enum"] = append(values, nil) }
@@ -28,6 +32,23 @@ func nullableSchema(schema object) object {
 		for _, key := range []string{"default", "description", "example"} {
 			if value, ok := schema[key]; ok { result[key] = value; delete(schema,key) }
 		}
+		return result
+	}
+	return schema
+}
+
+func nonNullableSchema(schema object) object {
+	if types, ok := schema["type"].([]string); ok && len(types)==2 && types[1]=="null" {
+		schema["type"]=types[0]
+	}
+	if values, ok := schema["enum"].([]any); ok {
+		filtered:=[]any{}
+		for _, value := range values { if value!=nil { filtered=append(filtered,value) } }
+		schema["enum"]=filtered
+	}
+	if alternatives, ok := schema["anyOf"].([]object); ok && len(alternatives)==2 && alternatives[1]["type"]=="null" {
+		result:=alternatives[0]
+		for key,value:=range schema { if key!="anyOf" { result[key]=value } }
 		return result
 	}
 	return schema
@@ -74,6 +95,10 @@ func (d *openAPIDocument) typeSchema(t reflect.Type, input, text bool) object {
 		hash := sha256.Sum256([]byte(t.PkgPath() + ":" + t.String()))
 		name := t.Name()
 		if name == "" { name = "Object" }
+		name = strings.Map(func(r rune) rune {
+			if (r>='a' && r<='z') || (r>='A' && r<='Z') || (r>='0' && r<='9') || r=='_' || r=='.' || r=='-' { return r }
+			return '_'
+		},name)
 		name = fmt.Sprintf("%s_%s_%x", name, mode, hash[:6])
 		if _, exists := d.schemas[name]; !exists {
 			d.schemas[name] = object{}
@@ -116,6 +141,8 @@ func (d *openAPIDocument) structSchema(t reflect.Type, input bool, embedding map
 				}
 			}
 		}
+		if input && hasRequired(f.Tag.Get("validate")) { s = nonNullableSchema(s) }
+		if !input && t==reflect.TypeOf(ApiResult{}) && f.Name=="Alerts" { s=nonNullableSchema(s) }
 		props[name] = s
 		if (!input && !optional) || (input && hasRequired(f.Tag.Get("validate"))) { required = append(required,name) }
 	}
@@ -146,6 +173,7 @@ func (d *openAPIDocument) fieldSchema(f reflect.StructField, input, text bool) o
 	if !input && !text { return s }
 	tag := f.Tag.Get("validate")
 	if tag != "" { s["x-go-validate"] = tag }
+	if strings.Contains(tag,"omitempty") || strings.Contains(tag,"omitnil") || strings.Contains(tag,"|") { return s }
 	// Do not translate complex validator expressions into a stronger contract
 	// than the actual validator. Preserve the complete expression as an extension.
 	for _, rule := range strings.Split(tag,",") {

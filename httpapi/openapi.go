@@ -178,7 +178,7 @@ func (d *openAPIDocument) register(method, route string, in, out reflect.Type, i
 		}
 		required := (f.required && !f.hasDefault) || f.source == "path"
 		if f.source == "json" {
-			if !f.required { schema = nullableSchema(schema) }
+			if !f.required { schema = nullableSchema(schema) } else { schema = nonNullableSchema(schema) }
 			props[f.name] = schema
 			if required { requiredBody = append(requiredBody, f.name) }
 			continue

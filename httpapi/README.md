@@ -139,7 +139,7 @@ Add optional description and example tags to fields. Path, query, header,
 cookie and JSON fields are separated automatically; body schemas contain
 only JSON fields. Defaults are typed, and common validator rules are mapped
 to schema constraints. Output includes embedded ApiResult, nested structs,
-arrays and maps; recursive schemas use component references. Complex validator
+arrays and maps; recursive schemas use component references. Conditional and complex validator
 rules are retained in x-go-validate rather than fully translated.
 Custom JSON marshal/unmarshal implementations and unusual embedded-field
 conflicts may need manual documentation; the schema generator is intentionally

@@ -18,6 +18,7 @@ type docInput struct {
 	Session string `cookie:"session"`
 	Name string `json:"name" validate:"required"`
 	Priority int `json:"priority" default:"3" validate:"min=1,max=5"`
+	Enabled *bool `json:"enabled" validate:"required"`
 }
 type docOutput struct {
 	httpapi.ApiResult
@@ -54,7 +55,8 @@ func TestOpenAPI(t *testing.T) {
 	}
 	body:=op["requestBody"].(map[string]any)["content"].(map[string]any)["application/json"].(map[string]any)["schema"].(map[string]any)
 	props:=body["properties"].(map[string]any)
-	if len(props)!=2 || props["name"]==nil || props["priority"]==nil {t.Fatalf("wrong JSON properties %v",props)}
+	if len(props)!=3 || props["name"]==nil || props["priority"]==nil {t.Fatalf("wrong JSON properties %v",props)}
+	if props["enabled"].(map[string]any)["type"]!="boolean" { t.Fatal("required pointer must not allow null") }
 	responses:=op["responses"].(map[string]any)
 	for _, code:=range []string{"201","400","409","413","415","500"} {if responses[code]==nil{t.Fatalf("missing %s",code)}}
 	if responses["200"]!=nil {t.Fatal("explicit success response did not replace default")}
